@@ -129,10 +129,13 @@ def main():
     )
 
     # 6) Save trained policy
-    fname = f"remote_policy_bc_cache{CONFIG['max_cache']}.pt"
+    CHECKPOINT_DIR = os.path.join("checkpoints", "0.5b")
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+    fname = os.path.join(CHECKPOINT_DIR, f"remote_policy_bc_cache{CONFIG['max_cache']}.pt")
     torch.save(policy.state_dict(), fname)
-    print(f"\nSaved BC policy to {fname}")
 
 
 if __name__ == "__main__":
     main()
+
