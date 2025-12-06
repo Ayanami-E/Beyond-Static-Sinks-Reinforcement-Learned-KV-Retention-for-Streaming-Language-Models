@@ -21,6 +21,11 @@ from kv_policy.eval_kv import (
 from kv_policy.policy_net import RetentionPolicyMLP
 
 
+# where policy checkpoints are stored, e.g. checkpoints/0.5b
+CHECKPOINT_DIR = os.path.join("checkpoints", "0.5b")
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+
 # =============================
 #  DPO Dataset
 # =============================
@@ -73,8 +78,11 @@ def collect_dpo_token_pairs(
         text = ds[int(idx)]["text"][:max_books_chars]
 
         ids, feat_dict = collect_policy_features_for_text(
-            student_model, tokenizer, text,
-            max_len=max_len, device=device,
+            student_model,
+            tokenizer,
+            text,
+            max_len=max_len,
+            device=device,
         )
 
         ids = ids.cpu()
@@ -244,9 +252,9 @@ def main():
     d_hidden = 256
     d_in = X_pref.size(1)
 
-    # load BC policy
+    # load BC policy from checkpoints directory
     max_cache = CONFIG["max_cache"]
-    bc_path = f"remote_policy_bc_cache{max_cache}.pt"
+    bc_path = os.path.join(CHECKPOINT_DIR, f"remote_policy_bc_cache{max_cache}.pt")
     ref_policy = RetentionPolicyMLP(d_in, d_hidden)
     ref_policy.load_state_dict(torch.load(bc_path, map_location="cpu"))
 
@@ -263,8 +271,8 @@ def main():
         device=device,
     )
 
-    # save policy
-    save_path = f"remote_policy_dpo_cache{max_cache}.pt"
+    # save DPO policy into checkpoints directory
+    save_path = os.path.join(CHECKPOINT_DIR, f"remote_policy_dpo_cache{max_cache}.pt")
     torch.save(policy_dpo.state_dict(), save_path)
     print(f"Saved DPO policy to {save_path}")
 
