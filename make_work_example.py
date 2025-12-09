@@ -162,12 +162,20 @@ def main():
     max_cache = TARGET_CACHE
     sink = get_sink_size(max_cache)
     B_remote = get_B_remote(max_cache)
-    window = max_cache - sink - B_remote
+
+    # policy: sink + window_policy + B_remote = max_cache
+    window_policy = max_cache - sink - B_remote
+    # SW baseline: sink + window_sw = max_cache (no remote)
+    window_sw = max_cache - sink
 
     log_info(
         f"Configuration: cache={max_cache}, sink={sink}, "
-        f"B_remote={B_remote}, window={window}"
+        f"B_remote={B_remote}, window_policy={window_policy}, window_sw={window_sw}"
     )
+
+    if window_policy <= 0 or window_sw <= 0:
+        log_info("Window size <= 0 for this configuration. Exiting.")
+        return
 
     # Build checkpoint paths under CHECKPOINT_DIR
     bc_ckpt = os.path.join(CHECKPOINT_DIR, f"remote_policy_bc_cache{max_cache}.pt")
@@ -186,7 +194,7 @@ def main():
         max_len=MAX_LEN,
         max_cache=max_cache,
         sink_size=sink,
-        window_size=window,
+        window_size=window_sw,
         device=device,
         record_trace=True,
     )
@@ -203,7 +211,7 @@ def main():
             max_len=MAX_LEN,
             max_cache=max_cache,
             sink_size=sink,
-            window_size=window,
+            window_size=window_policy,
             B_remote=B_remote,
             device=device,
             record_trace=True,
@@ -224,7 +232,7 @@ def main():
             max_len=MAX_LEN,
             max_cache=max_cache,
             sink_size=sink,
-            window_size=window,
+            window_size=window_policy,
             B_remote=B_remote,
             device=device,
             record_trace=True,
