@@ -1,3 +1,4 @@
+```python
 import os
 import datetime
 import torch
@@ -28,7 +29,7 @@ CACHE_SIZES = [32, 64, 128, 256, 384, 512]
 # file paths for logging and aggregated results
 CSV_FILE = f"final_sweep_results{MAX_CHARS}.csv"
 LOG_FILE = f"eval_log{MAX_CHARS}.txt"
-CHECKPOINT_DIR = r"checkpoints\0.5b"# you can select  between 0.5b and 7b
+CHECKPOINT_DIR = r"checkpoints\0.5b"  # you can select between 0.5b and 7b
 
 
 # ======================================================
@@ -149,15 +150,20 @@ def main():
     for max_cache in tasks:
         sink = get_sink_size(max_cache)
         B_remote = get_B_remote(max_cache)
-        window = max_cache - sink - B_remote
+
+        # policy uses sink + window_policy + B_remote = max_cache
+        window_policy = max_cache - sink - B_remote
+        # SW baseline uses sink + window_sw = max_cache (no remote)
+        window_sw = max_cache - sink
 
         log_info("=" * 60)
         log_info(
-            f"Cache={max_cache} | Sink={sink} | B_remote={B_remote} | Window={window}"
+            f"Cache={max_cache} | Sink={sink} | B_remote={B_remote} | "
+            f"Window_policy={window_policy} | Window_SW={window_sw}"
         )
         log_info("=" * 60)
 
-        if window <= 0:
+        if window_policy <= 0 or window_sw <= 0:
             log_info("Window size <= 0 for this configuration. Skipping...")
             continue
 
@@ -169,7 +175,7 @@ def main():
         bc_policy = load_policy(student_model, bc_ckpt, device)
         dpo_policy = load_policy(student_model, dpo_ckpt, device)
 
-        # sliding-window baseline (uses same sink/window config as policy)
+        # sliding-window baseline (uses full max_cache: sink + window_sw)
         sw_ppls = []
         for text in tqdm(texts, desc=f"C{max_cache}-SW"):
             _, ppl = eval_stream_sink_window_baseline(
@@ -179,7 +185,7 @@ def main():
                 max_len=MAX_LEN,
                 max_cache=max_cache,
                 sink_size=sink,
-                window_size=window,
+                window_size=window_sw,
                 device=device,
             )
             sw_ppls.append(ppl)
@@ -198,7 +204,7 @@ def main():
                     max_len=MAX_LEN,
                     max_cache=max_cache,
                     sink_size=sink,
-                    window_size=window,
+                    window_size=window_policy,
                     B_remote=B_remote,
                     device=device,
                 )
@@ -220,7 +226,7 @@ def main():
                     max_len=MAX_LEN,
                     max_cache=max_cache,
                     sink_size=sink,
-                    window_size=window,
+                    window_size=window_policy,
                     B_remote=B_remote,
                     device=device,
                 )
@@ -235,7 +241,7 @@ def main():
             "Cache Size": max_cache,
             "Sink Size": sink,
             "B_remote": B_remote,
-            "Window Size": window,
+            "Window Size": window_policy,  # window used by policy methods
             "Full (Offline)": avg_full,
             "Baseline (SW)": avg_sw,
             "Policy (BC)": avg_bc,
@@ -254,3 +260,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
